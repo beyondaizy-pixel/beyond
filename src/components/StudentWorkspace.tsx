@@ -7,7 +7,7 @@ interface StudentWorkspaceProps {
 }
 
 const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
-  const { profile, topics, updateTrackProgress } = useStudent();
+  const { profile, topics, updateTrackProgress, addTrackNote } = useStudent();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState('');
 
@@ -42,21 +42,16 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
 
   const handleSaveNote = () => {
     if (selectedTopicId && noteContent.trim()) {
-      const note = {
-        id: `note-${Date.now()}`,
-        trackId,
-        topicId: selectedTopicId,
-        type: 'rough' as const,
-        content: noteContent,
-        tags: [] as string[],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isProcessed: false,
-      };
-      profile.notes.push(note);
+      addTrackNote(trackId, selectedTopicId, noteContent.trim());
       setNoteContent('');
     }
   };
+
+  React.useEffect(() => {
+    if (!selectedTopicId && track.topics.length > 0) {
+      setSelectedTopicId(track.topics[0]);
+    }
+  }, [selectedTopicId, track.topics]);
 
   return (
     <div className="student-workspace">
@@ -66,7 +61,6 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
       </div>
 
       <div className="workspace-layout">
-        {/* Topics list */}
         <aside className="topics-sidebar">
           <div className="sidebar-header">
             <h3>Topics</h3>
@@ -76,26 +70,26 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
             {trackProgress.map(({ topicId, topic, progress }) => (
               <button
                 key={topicId}
-                className={`topic-item ${selectedTopicId === topicId ? 'selected' : ''} ${progress.state.toLowerCase().replace(' ', '-')}`}
+                type="button"
+                className={`topic-item ${selectedTopicId === topicId ? 'selected' : ''} ${progress?.state?.toLowerCase().replace(' ', '-') ?? 'not-started'}`}
                 onClick={() => setSelectedTopicId(topicId)}
               >
-                <div className="topic-title">{topic.title}</div>
+                <div className="topic-title">{topic?.title ?? 'Unknown topic'}</div>
                 <div className="topic-progress-bar">
                   <div
                     className="progress-fill"
-                    style={{ width: `${progress.completionPercent}%` }}
+                    style={{ width: `${progress?.completionPercent ?? 0}%` }}
                   />
                 </div>
                 <div className="topic-meta">
-                  <span className="state-badge">{progress.state}</span>
-                  <span className="percent">{progress.completionPercent}%</span>
+                  <span className="state-badge">{progress?.state ?? 'Not Started'}</span>
+                  <span className="percent">{progress?.completionPercent ?? 0}%</span>
                 </div>
               </button>
             ))}
           </div>
         </aside>
 
-        {/* Main workspace */}
         <main className="workspace-main">
           {selectedTopic && selectedProgress ? (
             <div className="topic-workspace">
@@ -109,11 +103,10 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
                 </div>
               </div>
 
-              {/* State and progress controls */}
               <section className="control-panel">
                 <div className="state-selector">
                   <label>Progress State</label>
-                  <select value={selectedProgress.state} onChange={(e) => handleStateChange(e.target.value as any)}>
+                  <select value={selectedProgress.state} onChange={(e) => handleStateChange(e.target.value as StudentProgress['state'])}>
                     <option value="Not Started">Not Started</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Paused">Paused</option>
@@ -135,7 +128,6 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
                 </div>
               </section>
 
-              {/* External memory / notes section */}
               <section className="notes-section">
                 <h4>External Memory</h4>
                 <div className="note-input">
@@ -145,10 +137,9 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
                     placeholder="Capture rough notes, diagrams, questions, or ideas..."
                     rows={4}
                   />
-                  <button onClick={handleSaveNote} className="save-note-btn">Save Note</button>
+                  <button type="button" onClick={handleSaveNote} className="save-note-btn">Save Note</button>
                 </div>
 
-                {/* Display notes for this topic */}
                 <div className="notes-list">
                   {profile.notes
                     .filter((n) => n.trackId === trackId && n.topicId === selectedTopicId)
@@ -164,14 +155,13 @@ const StudentWorkspace: React.FC<StudentWorkspaceProps> = ({ trackId }) => {
                 </div>
               </section>
 
-              {/* Practice and related content */}
               <section className="learning-actions">
                 <h4>Learning Actions</h4>
                 <div className="action-buttons">
-                  <button className="action-btn">📚 Learn More</button>
-                  <button className="action-btn">✍️ Practice</button>
-                  <button className="action-btn">🔗 See Related Topics</button>
-                  <button className="action-btn">💭 Concept Explore</button>
+                  <button type="button" className="action-btn">📚 Learn More</button>
+                  <button type="button" className="action-btn">✍️ Practice</button>
+                  <button type="button" className="action-btn">🔗 See Related Topics</button>
+                  <button type="button" className="action-btn">💭 Concept Explore</button>
                 </div>
               </section>
             </div>
