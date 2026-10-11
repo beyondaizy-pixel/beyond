@@ -1,0 +1,790 @@
+import { useMemo, useState } from 'react';
+
+type Role = 'Student' | 'Freedom' | 'Open';
+type StudentView = 'Overview' | 'Learning' | 'Practice' | 'Memory' | 'Explore';
+type FreedomView = 'Overview' | 'Explore' | 'Skills' | 'Create';
+type OpenView = 'Overview' | 'Learn' | 'Projects' | 'Creators' | 'Saved';
+
+type Topic = {
+  id: number;
+  title: string;
+  family: string;
+  level: 'Foundational' | 'Applied' | 'Advanced';
+  summary: string;
+};
+
+const topicCatalog: Topic[] = [
+  { id: 1, title: 'Calculus', family: 'Mathematics', level: 'Foundational', summary: 'Change, accumulation, and rates of motion.' },
+  { id: 2, title: 'Linear Algebra', family: 'Mathematics', level: 'Foundational', summary: 'Vectors, matrices, transformations, and systems.' },
+  { id: 3, title: 'Electromagnetism', family: 'Physics', level: 'Foundational', summary: 'Electric and magnetic fields and their interactions.' },
+  { id: 4, title: 'Digital Electronics', family: 'Electronics', level: 'Applied', summary: 'Logic, switching, and binary information processing.' },
+  { id: 5, title: 'Cell Biology', family: 'Biology', level: 'Foundational', summary: 'The structures and processes of living cells.' },
+  { id: 6, title: 'Algorithms', family: 'Computer Science', level: 'Foundational', summary: 'Stepwise procedures that solve computational problems.' },
+  { id: 7, title: 'Artificial Intelligence', family: 'AI', level: 'Foundational', summary: 'Reasoning, perception, decision-making, and learning.' },
+  { id: 8, title: 'Psychology', family: 'Mind & Behaviour', level: 'Foundational', summary: 'Understanding thought, emotion, and behaviour.' },
+  { id: 9, title: 'Philosophy', family: 'Philosophy', level: 'Advanced', summary: 'Big questions about knowledge, ethics, and existence.' },
+  { id: 10, title: 'Microeconomics', family: 'Economics', level: 'Foundational', summary: 'Choices, incentives, and market behaviour.' },
+  { id: 11, title: 'Linguistics', family: 'Language', level: 'Foundational', summary: 'Structure and use of human language.' },
+  { id: 12, title: 'Systems Thinking', family: 'Systems', level: 'Applied', summary: 'Understanding interactions within complex systems.' },
+  { id: 13, title: 'Research', family: 'Skills', level: 'Applied', summary: 'Finding reliable questions, evidence, and synthesis.' },
+  { id: 14, title: 'Communication', family: 'Skills', level: 'Applied', summary: 'Clarity, structure, and effective exchange of ideas.' },
+  { id: 15, title: 'Music Theory', family: 'Music', level: 'Foundational', summary: 'The structure and language of music.' },
+  { id: 16, title: 'Computer Vision', family: 'AI', level: 'Applied', summary: 'Machines interpreting visual information.' },
+  { id: 17, title: 'Circuit Theory', family: 'Electronics', level: 'Foundational', summary: 'Current, voltage, components, and system behaviour.' },
+  { id: 18, title: 'Genetics', family: 'Biology', level: 'Foundational', summary: 'Inheritance, variation, and gene function.' },
+  { id: 19, title: 'Critical Thinking', family: 'Skills', level: 'Applied', summary: 'Reasoning carefully and evaluating evidence.' },
+  { id: 20, title: 'Public Speaking', family: 'Skills', level: 'Applied', summary: 'Speaking clearly and persuasively with structure.' },
+];
+
+const roleConfig: Record<Role, { title: string; tagline: string; nav: string[]; focus: string[]; accent: string }> = {
+  Student: {
+    title: 'Student',
+    tagline: 'Academic clarity with room to explore beyond the syllabus.',
+    nav: ['Learning', 'Practice', 'Memory', 'Explore'],
+    focus: ['Ongoing learning', 'Curriculum', 'Rigidity Bar', 'Revision'],
+    accent: '#7dd3fc',
+  },
+  Freedom: {
+    title: 'Freedom',
+    tagline: 'Understand what matters, build capability, and make original work.',
+    nav: ['Explore', 'Skills', 'Create'],
+    focus: ['Discovery', 'Capability', 'Project work', 'Curiosity'],
+    accent: '#fbbf24',
+  },
+  Open: {
+    title: 'Open',
+    tagline: 'Shared learning, public knowledge, and community contributions.',
+    nav: ['Learn', 'Projects', 'Creators', 'Saved'],
+    focus: ['Community content', 'Teaching', 'Reports', 'Saved ideas'],
+    accent: '#c4b5fd',
+  },
+};
+
+const studentTracks = [
+  { title: 'Physics', subtitle: 'Current Electricity', progress: '68%', state: 'Active' },
+  { title: 'Mathematics', subtitle: 'Integrals', progress: '52%', state: 'Paused' },
+  { title: 'History', subtitle: 'French Revolution', progress: '83%', state: 'Review' },
+  { title: 'Chemistry', subtitle: 'Chemical Bonding', progress: '45%', state: 'Needs attention' },
+];
+
+const practiceModes = [
+  { label: 'Concept questions', detail: 'Core understanding checks' },
+  { label: 'Solve with me', detail: 'Guided reasoning' },
+  { label: 'Mock tests', detail: 'Timed academic practice' },
+  { label: 'Revision queue', detail: 'Weak areas, mistakes, recall' },
+];
+
+const memoryItems = [
+  { title: 'External Memory', detail: 'Rough notes, diagrams, prompts, and saved thoughts' },
+  { title: 'Handwritten material', detail: 'Diagrams, equations, annotations, and sketches' },
+  { title: 'Camera capture', detail: 'Book pages, classroom visuals, experiments, objects' },
+  { title: 'Saved ideas', detail: 'Questions, links, sparks, unfinished work' },
+];
+
+const skillTracks = [
+  { name: 'Programming', lane: 'Foundation → Practice → Projects' },
+  { name: 'Research', lane: 'Question → Evidence → Synthesis' },
+  { name: 'Music', lane: 'Theory → Technique → Composition' },
+  { name: 'Public speaking', lane: 'Structure → Delivery → Confidence' },
+];
+
+const createIdeas = [
+  'Write a short essay connecting philosophy and technology.',
+  'Build a small robotics prototype with sensor feedback.',
+  'Create a mini project on data visualisation and storytelling.',
+  'Compose an original melody using simple harmonic patterns.',
+];
+
+const communityItems = [
+  { title: 'How circuits behave under resistance', type: 'Tutorial' },
+  { title: 'A beginner guide to logic and decision-making', type: 'Lesson' },
+  { title: 'Building a compact microcontroller project', type: 'Project' },
+  { title: 'Notes on language and cognition', type: 'Article' },
+];
+
+const focusHints = [
+  'Go deeper',
+  'Go wider',
+  'Practise it',
+  'Apply it',
+  'Create something',
+  'Explore a connected subject',
+];
+
+function App() {
+  const [role, setRole] = useState<Role>('Student');
+  const [studentView, setStudentView] = useState<StudentView>('Overview');
+  const [freedomView, setFreedomView] = useState<FreedomView>('Overview');
+  const [openView, setOpenView] = useState<OpenView>('Overview');
+  const [query, setQuery] = useState('');
+
+  const activeViews = {
+    Student: ['Overview', 'Learning', 'Practice', 'Memory', 'Explore'] as StudentView[],
+    Freedom: ['Overview', 'Explore', 'Skills', 'Create'] as FreedomView[],
+    Open: ['Overview', 'Learn', 'Projects', 'Creators', 'Saved'] as OpenView[],
+  };
+
+  const filteredTopics = useMemo(() => {
+    if (!query) return topicCatalog;
+    return topicCatalog.filter((topic) =>
+      `${topic.title} ${topic.family} ${topic.summary}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+    );
+  }, [query]);
+
+  const renderStudentView = () => {
+    switch (studentView) {
+      case 'Learning':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Ongoing learning</h4>
+                <span className="chip">Multi-threaded</span>
+              </div>
+              <div className="stack-list">
+                {studentTracks.map((item) => (
+                  <article key={item.title} className="surface-row">
+                    <div>
+                      <p className="row-title">{item.title}</p>
+                      <p className="row-subtitle">{item.subtitle}</p>
+                    </div>
+                    <div className="row-meta">
+                      <span>{item.progress}</span>
+                      <span className="status-pill">{item.state}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Curriculum</h4>
+                <span className="chip">CBSE / ICSE / State / International</span>
+              </div>
+              <ul className="check-list">
+                <li>Country and board configuration</li>
+                <li>Class / grade and subject selection</li>
+                <li>Academic goals and exam requirements</li>
+                <li>Academic rigidity control</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Practice':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Practice tools</h4>
+                <span className="chip">Questions / Solve With Me / Tests / Revision</span>
+              </div>
+              <div className="card-grid two-up">
+                {practiceModes.map((item) => (
+                  <article key={item.label} className="mini-surface">
+                    <p className="row-title">{item.label}</p>
+                    <p className="row-subtitle">{item.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Solve With Me</h4>
+                <span className="chip">Guided</span>
+              </div>
+              <ul className="check-list">
+                <li>Hint-first reasoning</li>
+                <li>Retry and correction loop</li>
+                <li>Concept explanations when needed</li>
+                <li>Recurring mistake analysis</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Memory':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Memory and capture</h4>
+                <span className="chip">External memory</span>
+              </div>
+              <div className="card-grid two-up">
+                {memoryItems.map((item) => (
+                  <article key={item.title} className="mini-surface">
+                    <p className="row-title">{item.title}</p>
+                    <p className="row-subtitle">{item.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>AI organization</h4>
+                <span className="chip">Preserve original material</span>
+              </div>
+              <ul className="check-list">
+                <li>Summaries and topic links</li>
+                <li>Question generation</li>
+                <li>Notes without overwriting originals</li>
+                <li>Saved ideas that can re-enter learning</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Explore':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Explore beyond the syllabus</h4>
+                <span className="chip">Connected topics</span>
+              </div>
+              <div className="search-block">
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  type="text"
+                  placeholder="Search topic or concept"
+                  aria-label="Search topic catalogue"
+                />
+              </div>
+              <div className="tag-cloud compact-tag-cloud">
+                {filteredTopics.slice(0, 12).map((topic) => (
+                  <span key={topic.id} className="tag">
+                    {topic.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Where can I go from here?</h4>
+                <span className="chip">Optional</span>
+              </div>
+              <ul className="check-list">
+                {focusHints.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Student overview</h4>
+                <span className="chip">Learning system</span>
+              </div>
+              <div className="hero-strip">
+                <div>
+                  <p className="purple-label">Academic learning</p>
+                  <h5>Structure without confinement.</h5>
+                </div>
+                <div className="status-box">
+                  <span>Rigidity Bar</span>
+                  <strong>Balanced</strong>
+                </div>
+              </div>
+              <div className="card-grid three-up">
+                <article className="mini-surface">
+                  <p className="row-title">Learning</p>
+                  <p className="row-subtitle">Ongoing threads and connected topics</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Practice</p>
+                  <p className="row-subtitle">Questions, tests, and guided problem solving</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Memory</p>
+                  <p className="row-subtitle">External memory and captured material</p>
+                </article>
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Learning brain</h4>
+                <span className="chip">Tracked context</span>
+              </div>
+              <ul className="check-list">
+                <li>Progress and unfinished material</li>
+                <li>Repeated mistakes and weak areas</li>
+                <li>Connected topics and applications</li>
+                <li>Revision and future exploration paths</li>
+              </ul>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  const renderFreedomView = () => {
+    switch (freedomView) {
+      case 'Explore':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Explore the universe of ideas</h4>
+                <span className="chip">Discover</span>
+              </div>
+              <div className="search-block">
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  type="text"
+                  placeholder="Search for a concept, domain, or skill"
+                  aria-label="Search BEYOND library"
+                />
+              </div>
+              <div className="tag-cloud compact-tag-cloud">
+                {filteredTopics.map((topic) => (
+                  <span key={topic.id} className="tag">
+                    {topic.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Learning paths</h4>
+                <span className="chip">Optional</span>
+              </div>
+              <ul className="check-list">
+                <li>From foundations to projects</li>
+                <li>Choose by curiosity rather than fixed route</li>
+                <li>Connect across disciplines</li>
+                <li>Move from understanding to making</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Skills':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Skills</h4>
+                <span className="chip">Capability-focused</span>
+              </div>
+              <div className="card-grid two-up">
+                {skillTracks.map((item) => (
+                  <article key={item.name} className="mini-surface">
+                    <p className="row-title">{item.name}</p>
+                    <p className="row-subtitle">{item.lane}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Development sequence</h4>
+                <span className="chip">Adaptive</span>
+              </div>
+              <ul className="check-list">
+                <li>Foundation</li>
+                <li>Practice</li>
+                <li>Projects</li>
+                <li>Intermediate and advanced exploration</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Create':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Create</h4>
+                <span className="chip">Original work</span>
+              </div>
+              <div className="card-grid one-up">
+                {createIdeas.map((idea) => (
+                  <article key={idea} className="mini-surface">
+                    <p className="row-title">{idea}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Connected work</h4>
+                <span className="chip">Progressive</span>
+              </div>
+              <ul className="check-list">
+                <li>Ideas can become notes, projects, and learning paths</li>
+                <li>Skills feed creation and vice versa</li>
+                <li>External memory becomes a usable archive</li>
+                <li>AI can assist without replacing the creator</li>
+              </ul>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Freedom overview</h4>
+                <span className="chip">Expand</span>
+              </div>
+              <div className="hero-strip">
+                <div>
+                  <p className="purple-label">Curiosity-led</p>
+                  <h5>What do you want to understand, develop, or make?</h5>
+                </div>
+                <div className="status-box orange-box">
+                  <span>Capability arc</span>
+                  <strong>Explore → Build → Create</strong>
+                </div>
+              </div>
+              <div className="card-grid three-up">
+                <article className="mini-surface">
+                  <p className="row-title">Explore</p>
+                  <p className="row-subtitle">Connected fields and broad understanding</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Skills</p>
+                  <p className="row-subtitle">Practice and progression in real capability</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Create</p>
+                  <p className="row-subtitle">Original work with AI and memory support</p>
+                </article>
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Discovery mode</h4>
+                <span className="chip">Prompt-driven</span>
+              </div>
+              <ul className="check-list">
+                <li>“I want to understand how computers work.”</li>
+                <li>“Why does time behave differently in relativity?”</li>
+                <li>“How does human decision-making work?”</li>
+                <li>“What connects entropy and information?”</li>
+              </ul>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  const renderOpenView = () => {
+    switch (openView) {
+      case 'Learn':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Learn</h4>
+                <span className="chip">Shared knowledge</span>
+              </div>
+              <div className="stack-list">
+                {communityItems.map((item) => (
+                  <article key={item.title} className="surface-row">
+                    <div>
+                      <p className="row-title">{item.title}</p>
+                      <p className="row-subtitle">{item.type}</p>
+                    </div>
+                    <button type="button" className="link-button">Open</button>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Moderation</h4>
+                <span className="chip">Layered checks</span>
+              </div>
+              <ul className="check-list">
+                <li>User upload and review workflow</li>
+                <li>Automated claim checks and flags</li>
+                <li>Reports for misinformation and unsafe content</li>
+                <li>Human review for important concerns</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Projects':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Projects</h4>
+                <span className="chip">Show useful work</span>
+              </div>
+              <div className="card-grid one-up">
+                <article className="mini-surface">
+                  <p className="row-title">An experiment in understanding signal processing</p>
+                  <p className="row-subtitle">A live demonstration project with notes and diagrams</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Designing a small AI agent for spaced revision</p>
+                  <p className="row-subtitle">Prompting, evaluation, and iteration</p>
+                </article>
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Community profile</h4>
+                <span className="chip">Creators</span>
+              </div>
+              <ul className="check-list">
+                <li>Profiles and expertise areas</li>
+                <li>Lesson publishing and notes</li>
+                <li>Saved public work</li>
+                <li>Credibility and source awareness</li>
+              </ul>
+            </div>
+          </div>
+        );
+      case 'Creators':
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Creators</h4>
+                <span className="chip">People who teach</span>
+              </div>
+              <div className="card-grid two-up">
+                <article className="mini-surface">
+                  <p className="row-title">Aisha — Physics and teaching</p>
+                  <p className="row-subtitle">Explains difficult ideas with examples</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Rohan — Programming and systems</p>
+                  <p className="row-subtitle">Builds learning tools and experiments</p>
+                </article>
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Saved and shared</h4>
+                <span className="chip">Library</span>
+              </div>
+              <ul className="check-list">
+                <li>Saved lessons and notes</li>
+                <li>Community uploads</li>
+                <li>Curated learning collections</li>
+                <li>Tracked references and provenance</li>
+              </ul>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="panel-stack">
+            <div className="section-panel wide-panel">
+              <div className="panel-header">
+                <h4>Open overview</h4>
+                <span className="chip">Community learning</span>
+              </div>
+              <div className="hero-strip">
+                <div>
+                  <p className="purple-label">Open</p>
+                  <h5>People teach, learn, explain, and build together.</h5>
+                </div>
+                <div className="status-box purple-box">
+                  <span>Shared space</span>
+                  <strong>Ideas + projects + teaching</strong>
+                </div>
+              </div>
+              <div className="card-grid three-up">
+                <article className="mini-surface">
+                  <p className="row-title">Learn</p>
+                  <p className="row-subtitle">Lessons, videos, explanations, tutorials</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Projects</p>
+                  <p className="row-subtitle">Show real discoveries and prototypes</p>
+                </article>
+                <article className="mini-surface">
+                  <p className="row-title">Saved</p>
+                  <p className="row-subtitle">Collections, favourites, and references</p>
+                </article>
+              </div>
+            </div>
+            <div className="section-panel">
+              <div className="panel-header">
+                <h4>Knowledge distinction</h4>
+                <span className="chip">Important</span>
+              </div>
+              <ul className="check-list">
+                <li>Community material is distinct from verified library content</li>
+                <li>Source metadata and provenance remain visible</li>
+                <li>Reports and moderation support safe sharing</li>
+              </ul>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  const roleTabs = activeViews[role];
+
+  const renderRoleTabs = () => {
+    if (role === 'Student') {
+      return roleTabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          className={`tab-button ${studentView === tab ? 'active' : ''}`}
+          onClick={() => setStudentView(tab)}
+        >
+          {tab}
+        </button>
+      ));
+    }
+
+    if (role === 'Freedom') {
+      return roleTabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          className={`tab-button ${freedomView === tab ? 'active' : ''}`}
+          onClick={() => setFreedomView(tab)}
+        >
+          {tab}
+        </button>
+      ));
+    }
+
+    return roleTabs.map((tab) => (
+      <button
+        key={tab}
+        type="button"
+        className={`tab-button ${openView === tab ? 'active' : ''}`}
+        onClick={() => setOpenView(tab)}
+      >
+        {tab}
+      </button>
+    ));
+  };
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand-block">
+          <div className="brand-mark" aria-label="BEYOND logo">
+            <span className="brand-mark__inner" />
+          </div>
+          <div>
+            <p className="eyebrow">LEARNING ECOSYSTEM</p>
+            <h1>BEYOND</h1>
+          </div>
+        </div>
+
+        <nav className="primary-nav" aria-label="Role selector">
+          {(['Student', 'Freedom', 'Open'] as Role[]).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`nav-pill ${role === item ? 'selected' : ''}`}
+              onClick={() => setRole(item)}
+            >
+              <span>{item}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="mini-panel">
+          <p className="panel-label">Active role</p>
+          <h2>{roleConfig[role].title}</h2>
+          <p>{roleConfig[role].tagline}</p>
+        </div>
+
+        <div className="mini-panel muted">
+          <p className="panel-label">Current focus</p>
+          <ul>
+            {roleConfig[role].focus.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      <main className="main-panel">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow soft">Role selector</p>
+            <h2>What are you here to do today?</h2>
+          </div>
+          <button type="button" className="ghost-button">
+            Search BEYOND
+          </button>
+        </header>
+
+        <section className="hero">
+          <div>
+            <p className="purple-label">{roleConfig[role].title}</p>
+            <h3>{roleConfig[role].tagline}</h3>
+          </div>
+          <div className="hero-actions">
+            <button type="button">Create my material</button>
+            <button type="button" className="secondary">Use my material</button>
+          </div>
+        </section>
+
+        <nav className="tab-group" aria-label="Role section navigation">
+          {renderRoleTabs()}
+        </nav>
+
+        <section className="content-grid">
+          <div className="section-panel wide-panel">
+            {role === 'Student' && renderStudentView()}
+            {role === 'Freedom' && renderFreedomView()}
+            {role === 'Open' && renderOpenView()}
+          </div>
+
+          <div className="section-panel side-panel">
+            <div className="panel-header">
+              <h4>Knowledge library</h4>
+              <span className="chip">Seed catalogue</span>
+            </div>
+            <div className="tag-cloud compact-tag-cloud">
+              {filteredTopics.slice(0, 10).map((topic) => (
+                <span key={topic.id} className="tag">
+                  {topic.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="lower-grid">
+          <div className="section-panel">
+            <div className="panel-header">
+              <h4>Where can I go from here?</h4>
+              <span className="chip">Optional</span>
+            </div>
+            <ul className="direction-list">
+              {focusHints.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="section-panel">
+            <div className="panel-header">
+              <h4>Architecture note</h4>
+              <span className="chip">Foundation</span>
+            </div>
+            <ul className="check-list">
+              <li>Knowledge library, graph, and AI are designed for later integration</li>
+              <li>Data models and app flows are modular and extensible</li>
+              <li>Platform shell is ready for future features</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default App;
